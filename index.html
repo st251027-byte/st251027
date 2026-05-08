@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>かわいい ぷよぱずる</title>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cell-size: 30px;
+            --cols: 6;
+            --rows: 12;
+            --board-width: calc(var(--cell-size) * var(--cols));
+            --board-height: calc(var(--cell-size) * var(--rows));
+        }
+
+        @media (max-width: 400px) {
+            :root {
+                --cell-size: 26px;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%);
+            color: #ff6b81;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            text-shadow: 2px 2px 0px #fff;
+            color: #ff4757;
+        }
+
+        .game-wrapper {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+
+        .ui-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 80px;
+        }
+
+        .panel-box {
+            background: rgba(255, 255, 255, 0.8);
+            border: 3px solid #ff7f50;
+            border-radius: 12px;
+            padding: 10px 5px;
+            text-align: center;
+            box-shadow: 0 4px 0 #ff7f50;
+        }
+
+        .panel-box h2 {
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            color: #ff6348;
+        }
+
+        .score-val {
+            font-size: 1.2rem;
+            color: #ff4757;
+        }
+
+        .next-preview {
+            position: relative;
+            height: calc(var(--cell-size) * 2.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* ボード全体 */
+        .board-container {
+            position: relative;
+            width: var(--board-width);
+            height: var(--board-height);
+            background: rgba(255, 255, 255, 0.6);
+            border: 4px solid #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 15px rgba(255, 107, 129, 0.2);
+        }
+
+        /* グリッドマス目 */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(var(--cols), var(--cell-size));
+            grid-template-rows: repeat(var(--rows), var(--cell-size));
+            position: absolute;
+            top: 0; left: 0;
+        }
+
+        .grid-cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            border-bottom: 1px dashed rgba(255, 184, 184, 0.3);
+            border-right: 1px dashed rgba(255, 184, 184, 0.3);
+        }
+
+        /* ぷよ（スライム）のデザイン */
+        .puyo {
+            position: absolute;
+            width: var(--cell-size);
+            height: var(--cell-size);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset -3px -3px 6px rgba(0,0,0,0.1), 
+                        inset 2px 2px 4px rgba(255,255,255,0.7);
+            transition: transform 0.1s linear; /* 移動時のスムーズさ */
+            z-index: 10;
+        }
+
+        /* 目 */
+        .puyo::before, .puyo::after {
+            content: '';
+            position: absolute;
+            width: 15%;
+            height: 25%;
+            background: #2f3542;
+            border-radius: 50%;
+            top: 25%;
+        }
+        .puyo::before { left: 25%; }
+        .puyo::after { right: 25%; }
+
+        /* ハイライト */
+        .puyo-highlight {
+            position: absolute;
+            width: 25%;
+            height: 15%;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            top: 8%;
+            left: 15%;
+            transform: rotate(-25deg);
+        }
+
+        /* カラーバリエーション */
+        .color-1 { background-color: #ff7eb3; } /* ピンク */
+        .color-2 { background-color: #7ec8ff; } /* 水色 */
+        .color-3 { background-color: #88f7a6; } /* 緑 */
+        .color-4 { background-color: #fff07e; } /* 黄色 */
+
+        /* ゴースト（落下予測位置） */
+        .puyo.ghost {
+            opacity: 0.3;
+            box-shadow: none;
+            z-index: 5;
+        }
+        .puyo.ghost::before, .puyo.ghost::after, .puyo.ghost .puyo-highlight {
+            display: none; /* ゴーストは顔なし */
+        }
+
+        /* 消去時のアニメーション */
+        .puyo.pop {
+            animation: popAnim 0.3s forwards;
+        }
+
+        @keyframes popAnim {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        /* 連鎖エフェクト */
+        .chain-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            color: #ff4757;
+            text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff;
+            pointer-events: none;
+            z-index: 100;
+            animation: floatUp 1s forwards;
+            opacity: 0;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translate(-50%, -30%) scale(0.5); opacity: 0; }
+            20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            100% { transform: translate(-50%, -80%) scale(1); opacity: 0; }
+        }
+
+        /* コントローラー */
+        .controls {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            width: 100%;
+            max-width: 280px;
+        }
+
+        .btn {
+            background: #fff;
+            border: 2px solid #ff7f50;
+            border-radius: 15px;
+            padding: 12px 0;
+            font-size: 1.2rem;
+            color: #ff6348;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #ff7f50;
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #ff7f50;
+        }
+
+        .btn-large {
+            grid-column: span 2;
+            background: #ff7f50;
+            color: #fff;
+            border-color: #ff6348;
+            box-shadow: 0 4px 0 #ff6348;
+        }
+        .btn-large:active {
+            box-shadow: 0 0 0 #ff6348;
+        }
+
+        /* モーダル画面 */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 240, 245, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal {
+            background: #fff;
+            border: 4px solid #ff7f50;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(255, 107, 129, 0.3);
+            max-width: 90%;
+        }
+
+        .modal h2 {
+            color: #ff4757;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
+
+        .start-btn {
+            background: #ff7f50;
+            color: white;
+            border: none;
+            padding: 10px 30px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #eccc68;
+            margin-top: 10px;
+        }
+        
+        .start-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #eccc68;
+        }
+
+        .hidden { display: none !important; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>かわいい ぷよぱずる</h1>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="ui-panel">
+            <div class="panel-box">
+                <h2>スコア</h2>
+                <div class="score-val" id="score">0</div>
+            </div>
+            <div class="panel-box">
+                <h2>つぎ</h2>
+                <div class="next-preview" id="next-box"></div>
+            </div>
+        </div>
+
+        <div class="board-container" id="board">
+            <!-- 背景グリッド -->
+            <div class="grid" id="grid-bg"></div>
+            <!-- 固定されたぷよがここに追加される -->
+            <div id="static-puyos"></div>
+            
+            <!-- アクティブ（操作中）ぷよ -->
+            <div id="active-puyos">
+                <div id="ghost-main" class="puyo ghost hidden"><div class="puyo-highlight"></div></div>
+                <div id="ghost-sub" class="puyo ghost hidden"><div class="puyo-highlight"></div></div>
+                <div id="puyo-main" class="puyo hidden"><div class="puyo-highlight"></div></div>
+                <div id="puyo-sub" class="puyo hidden"><div class="puyo-highlight"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" id="btn-left">◀</button>
+        <button class="btn" id="btn-down">▼</button>
+        <button class="btn" id="btn-right">▶</button>
+        <button class="btn" id="btn-rotate">↻</button>
+        <button class="btn btn-large" style="grid-column: span 4;" id="btn-drop">一気に落とす</button>
+    </div>
+
+    <!-- スタート / ゲームオーバー 画面 -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <h2 id="modal-title">ぷよぱずる</h2>
+            <p style="color: #666; margin-bottom: 15px; font-size: 0.9rem;">
+                同じ色を4つ以上つなげて消そう！<br>
+                PC: 矢印キーで移動、上で回転
+            </p>
+            <button class="start-btn" id="start-btn">スタート♪</button>
+        </div>
+    </div>
+
+    <script>
+        // === 定数 ===
+        const COLS = 6;
+        const ROWS = 12;
+        const CELL_SIZE = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-size')) || 30;
+        const COLORS = 4;
+        const POP_REQUIREMENT = 4;
+        
+        // === ゲーム状態 ===
+        let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0)); // 0:空, 1-4:色
+        let score = 0;
+        let gameActive = false;
+        let isAnimating = false;
+        let dropInterval;
+        let fallSpeed = 800; // 初期スピード
+
+        // 現在操作中のぷよ
+        let currentPiece = null; 
+        let nextPiece = null;
+
+        // === DOM要素 ===
+        const domBoard = document.getElementById('board');
+        const domStatic = document.getElementById('static-puyos');
+        const domScore = document.getElementById('score');
+        const domNext = document.getElementById('next-box');
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modal-title');
+
+        // アクティブな要素
+        const elMain = document.getElementById('puyo-main');
+        const elSub = document.getElementById('puyo-sub');
+        const elGhostMain = document.getElementById('ghost-main');
+        const elGhostSub = document.getElementById('ghost-sub');
+
+        // === 初期化 ===
+        function initGrid() {
+            const gridBg = document.getElementById('grid-bg');
+            gridBg.innerHTML = '';
+            for(let i=0; i<COLS*ROWS; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell';
+                gridBg.appendChild(cell);
+            }
+        }
+        initGrid();
+
+        const wait = ms => new Promise(res => setTimeout(res, ms));
+
+        function getRandomColor() {
+            return Math.floor(Math.random() * COLORS) + 1;
+        }
+
+        function createPuyoHTML(color) {
+            return `<div class="puyo color-${color}"><div class="puyo-highlight"></div></div>`;
+        }
+
+        // === レンダリング ===
+        // 現在のボード状態をすべて描画し直す（アニメーション終了後用）
+        function renderBoard() {
+            domStatic.innerHTML = '';
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] !== 0) {
+                        const p = document.createElement('div');
+                        p.className = `puyo color-${board[y][x]}`;
+                        p.id = `cell-${x}-${y}`;
+                        p.style.transform = `translate(${x * CELL_SIZE}px, ${y * CELL_SIZE}px)`;
+                        p.innerHTML = '<div class="puyo-highlight"></div>';
+                        domStatic.appendChild(p);
+                    }
+                }
+            }
+        }
+
+        // 操作中ぷよの座標と色を更新
+        function updateActivePiece() {
+            if (!currentPiece) {
+                elMain.classList.add('hidden'); elSub.classList.add('hidden');
+                elGhostMain.classList.add('hidden'); elGhostSub.classList.add('hidden');
+                return;
+            }
+
+            elMain.classList.remove('hidden');
+            elMain.className = `puyo color-${currentPiece.mainColor}`;
+            elMain.style.transform = `translate(${currentPiece.x * CELL_SIZE}px, ${currentPiece.y * CELL_SIZE}px)`;
+
+            elSub.classList.remove('hidden');
+            elSub.className = `puyo color-${currentPiece.subColor}`;
+            elSub.style.transform = `translate(${currentPiece.subX * CELL_SIZE}px, ${currentPiece.subY * CELL_SIZE}px)`;
+
+            // ゴーストの計算
+            const ghost = calculateGhost();
+            elGhostMain.classList.remove('hidden');
+            elGhostMain.className = `puyo ghost color-${currentPiece.mainColor}`;
+            elGhostMain.style.transform = `translate(${ghost.x * CELL_SIZE}px, ${ghost.y * CELL_SIZE}px)`;
+
+            elGhostSub.classList.remove('hidden');
+            elGhostSub.className = `puyo ghost color-${currentPiece.subColor}`;
+            elGhostSub.style.transform = `translate(${ghost.subX * CELL_SIZE}px, ${ghost.subY * CELL_SIZE}px)`;
+        }
+
+        // ゴーストの落下位置を計算
+        function calculateGhost() {
+            let gy = currentPiece.y;
+            let gSubY = currentPiece.subY;
+            
+            while (true) {
+                if (!isValidPos(currentPiece.x, gy + 1) || !isValidPos(currentPiece.subX, gSubY + 1)) {
+                    break;
+                }
+                gy++;
+                gSubY++;
+            }
+            return { x: currentPiece.x, y: gy, subX: currentPiece.subX, subY: gSubY };
+        }
+
+        function renderNext() {
+            domNext.innerHTML = '';
+            if (nextPiece) {
+                const s = document.createElement('div');
+                s.className = `puyo color-${nextPiece.subColor}`;
+                s.style.transform = `translate(0px, -15px)`;
+                s.innerHTML = '<div class="puyo-highlight"></div>';
+                
+                const m = document.createElement('div');
+                m.className = `puyo color-${nextPiece.mainColor}`;
+                m.style.transform = `translate(0px, 15px)`;
+                m.innerHTML = '<div class="puyo-highlight"></div>';
+                
+                domNext.appendChild(s);
+                domNext.appendChild(m);
+            }
+        }
+
+        // === ゲームロジック ===
+        function startGame() {
+            board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            score = 0;
+            domScore.innerText = score;
+            gameActive = true;
+            isAnimating = false;
+            fallSpeed = 800;
+            
+            nextPiece = { mainColor: getRandomColor(), subColor: getRandomColor() };
+            renderBoard();
+            spawnPiece();
+            
+            modal.classList.add('hidden');
+            if (dropInterval) clearInterval(dropInterval);
+            dropInterval = setInterval(autoDrop, fallSpeed);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            clearInterval(dropInterval);
+            modalTitle.innerText = "ゲームオーバー";
+            modal.classList.remove('hidden');
+        }
+
+        function spawnPiece() {
+            // 出現位置
+            const startX = 2;
+            const startY = 1;
+
+            if (board[startY][startX] !== 0 || board[startY-1][startX] !== 0) {
+                gameOver();
+                return;
+            }
+
+            currentPiece = {
+                x: startX, y: startY,
+                subX: startX, subY: startY - 1,
+                mainColor: nextPiece.mainColor, subColor: nextPiece.subColor,
+                rot: 0 // 0:上, 1:右, 2:下, 3:左
+            };
+
+            nextPiece = { mainColor: getRandomColor(), subColor: getRandomColor() };
+            renderNext();
+            updateActivePiece();
+        }
+
+        // --- 操作 ---
+        function isValidPos(x, y) {
+            if (x < 0 || x >= COLS || y >= ROWS) return false;
+            if (y >= 0 && board[y][x] !== 0) return false; // 盤面にあるブロック
+            return true;
+        }
+
+        function move(dx, dy) {
+            if (!gameActive || isAnimating || !currentPiece) return false;
+            
+            if (isValidPos(currentPiece.x + dx, currentPiece.y + dy) && 
+                isValidPos(currentPiece.subX + dx, currentPiece.subY + dy)) {
+                
+                currentPiece.x += dx;
+                currentPiece.y += dy;
+                currentPiece.subX += dx;
+                currentPiece.subY += dy;
+                updateActivePiece();
+                return true;
+            }
+            return false;
+        }
+
+        function rotate() {
+            if (!gameActive || isAnimating || !currentPiece) return;
+
+            const nextRot = (currentPiece.rot + 1) % 4;
+            let nx = currentPiece.x, ny = currentPiece.y;
+
+            if (nextRot === 0) ny--;      // 上
+            else if (nextRot === 1) nx++; // 右
+            else if (nextRot === 2) ny++; // 下
+            else if (nextRot === 3) nx--; // 左
+
+            // 壁蹴り（簡易的）
+            if (!isValidPos(nx, ny)) {
+                if (nx < 0) { currentPiece.x++; nx++; } // 左壁
+                else if (nx >= COLS) { currentPiece.x--; nx--; } // 右壁
+                else return; // 床やブロックで回転不可
+            }
+
+            // 回転後も不正ならキャンセル
+            if (!isValidPos(currentPiece.x, currentPiece.y) || !isValidPos(nx, ny)) return;
+
+            currentPiece.subX = nx;
+            currentPiece.subY = ny;
+            currentPiece.rot = nextRot;
+            updateActivePiece();
+        }
+
+        function hardDrop() {
+            if (!gameActive || isAnimating || !currentPiece) return;
+            const ghost = calculateGhost();
+            currentPiece.x = ghost.x;
+            currentPiece.y = ghost.y;
+            currentPiece.subX = ghost.subX;
+            currentPiece.subY = ghost.subY;
+            updateActivePiece();
+            lockPiece();
+        }
+
+        function autoDrop() {
+            if (!gameActive || isAnimating) return;
+            if (!move(0, 1)) {
+                lockPiece();
+            }
+        }
+
+        // --- 固定と連鎖 ---
+        async function lockPiece() {
+            isAnimating = true;
+            clearInterval(dropInterval);
+
+            // ボードに書き込み
+            if (currentPiece.y >= 0) board[currentPiece.y][currentPiece.x] = currentPiece.mainColor;
+            if (currentPiece.subY >= 0) board[currentPiece.subY][currentPiece.subX] = currentPiece.subColor;
+            
+            currentPiece = null;
+            updateActivePiece(); // アクティブを隠す
+            renderBoard();
+
+            // 連鎖処理ループ
+            await resolveChains();
+
+            if (gameActive) {
+                spawnPiece();
+                isAnimating = false;
+                dropInterval = setInterval(autoDrop, fallSpeed);
+            }
+        }
+
+        async function applyGravity() {
+            let dropped = false;
+            
+            for (let x = 0; x < COLS; x++) {
+                for (let y = ROWS - 1; y >= 0; y--) {
+                    if (board[y][x] === 0) continue;
+                    
+                    let targetY = y;
+                    while (targetY + 1 < ROWS && board[targetY + 1][x] === 0) {
+                        targetY++;
+                    }
+                    
+                    if (targetY !== y) {
+                        board[targetY][x] = board[y][x];
+                        board[y][x] = 0;
+                        dropped = true;
+                    }
+                }
+            }
+            if (dropped) {
+                renderBoard();
+                await wait(250); // 落下を見せる時間
+            }
+            return dropped;
+        }
+
+        function findMatches() {
+            const visited = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+            const matches = [];
+
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] === 0 || visited[y][x]) continue;
+
+                    const color = board[y][x];
+                    const group = [];
+                    const queue = [{x, y}];
+                    visited[y][x] = true;
+
+                    while (queue.length > 0) {
+                        const curr = queue.shift();
+                        group.push(curr);
+
+                        const dirs = [[0,-1], [1,0], [0,1], [-1,0]];
+                        for (let [dx, dy] of dirs) {
+                            let nx = curr.x + dx, ny = curr.y + dy;
+                            if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS) {
+                                if (!visited[ny][nx] && board[ny][nx] === color) {
+                                    visited[ny][nx] = true;
+                                    queue.push({x: nx, y: ny});
+                                }
+                            }
+                        }
+                    }
+                    if (group.length >= POP_REQUIREMENT) {
+                        matches.push(group);
+                    }
+                }
+            }
+            return matches;
+        }
+
+        async function resolveChains() {
+            let chain = 0;
+            while (true) {
+                await applyGravity();
+                const matches = findMatches();
+                
+                if (matches.length === 0) break;
+                
+                chain++;
+                let popCount = 0;
+                
+                // 消えるアニメーション付与
+                matches.forEach(group => {
+                    popCount += group.length;
+                    group.forEach(p => {
+                        const el = document.getElementById(`cell-${p.x}-${p.y}`);
+                        if (el) el.classList.add('pop');
+                        board[p.y][p.x] = 0; // 内部データからは消す
+                    });
+                });
+
+                // 連鎖表示
+                if (chain > 1) {
+                    const msg = document.createElement('div');
+                    msg.className = 'chain-text';
+                    msg.innerText = `${chain}連鎖!!`;
+                    domBoard.appendChild(msg);
+                    setTimeout(() => msg.remove(), 1000);
+                }
+
+                // スコア計算
+                const multiplier = chain === 1 ? 1 : (chain - 1) * 8;
+                score += popCount * 10 * multiplier;
+                domScore.innerText = score;
+
+                // スピードアップ
+                if (score > 1000 && fallSpeed > 400) fallSpeed = 600;
+                if (score > 3000 && fallSpeed > 300) fallSpeed = 400;
+
+                await wait(400); // 消えるアニメーションの完了を待つ
+                renderBoard(); // 完全に消えた状態を再描画
+            }
+        }
+
+        // === イベントリスナー ===
+        // キーボード
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowLeft') move(-1, 0);
+            if (e.key === 'ArrowRight') move(1, 0);
+            if (e.key === 'ArrowDown') move(0, 1);
+            if (e.key === 'ArrowUp') rotate();
+            if (e.key === ' ') hardDrop();
+        });
+
+        // ボタン（タッチ＆クリック対応）
+        const attachBtn = (id, action) => {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', e => { e.preventDefault(); action(); });
+            btn.addEventListener('mousedown', e => { e.preventDefault(); action(); });
+        };
+
+        attachBtn('btn-left', () => move(-1, 0));
+        attachBtn('btn-right', () => move(1, 0));
+        attachBtn('btn-down', () => move(0, 1));
+        attachBtn('btn-rotate', rotate);
+        attachBtn('btn-drop', hardDrop);
+
+        document.getElementById('start-btn').addEventListener('click', startGame);
+
+    </script>
+</body>
+</html>
