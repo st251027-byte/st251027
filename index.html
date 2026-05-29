@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>かわいい ぷよぱずる</title>
-    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --cell-size: 30px;
@@ -25,13 +25,13 @@
             margin: 0;
             padding: 0;
             user-select: none;
-            touch-action: manipulation;
+            touch-action: none; /* スワイプ時のデフォルトスクロールを防止 */
         }
 
         body {
-            font-family: 'M PLUS Rounded 1c', sans-serif;
-            background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%);
-            color: #ff6b81;
+            font-family: 'Noto Sans JP', sans-serif;
+            background: radial-gradient(circle at 50% 0%, #2b2b40 0%, #0f0f1a 100%);
+            color: #e2e8f0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -42,46 +42,61 @@
 
         header {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
         }
 
         h1 {
+            font-family: 'Montserrat', 'Noto Sans JP', sans-serif;
             font-size: 1.8rem;
-            text-shadow: 2px 2px 0px #fff;
-            color: #ff4757;
+            color: #fff;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px #00f3ff, 0 0 20px #00f3ff;
+            text-transform: uppercase;
         }
 
         .game-wrapper {
             display: flex;
-            gap: 15px;
+            gap: 20px;
             align-items: flex-start;
         }
 
         .ui-panel {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            width: 80px;
+            gap: 15px;
+            width: 90px;
         }
 
         .panel-box {
-            background: rgba(255, 255, 255, 0.8);
-            border: 3px solid #ff7f50;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border-radius: 12px;
-            padding: 10px 5px;
+            padding: 15px 5px;
             text-align: center;
-            box-shadow: 0 4px 0 #ff7f50;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
         }
 
         .panel-box h2 {
-            font-size: 0.8rem;
-            margin-bottom: 5px;
-            color: #ff6348;
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+            color: #94a3b8;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
         .score-val {
-            font-size: 1.2rem;
-            color: #ff4757;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #00f3ff;
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+            transition: transform 0.2s;
+        }
+
+        .score-val.bump {
+            transform: scale(1.3);
         }
 
         .next-preview {
@@ -97,10 +112,12 @@
             position: relative;
             width: var(--board-width);
             height: var(--board-height);
-            background: rgba(255, 255, 255, 0.6);
-            border: 4px solid #fff;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            box-shadow: 0 8px 15px rgba(255, 107, 129, 0.2);
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            backdrop-filter: blur(5px);
         }
 
         /* グリッドマス目 */
@@ -110,80 +127,76 @@
             grid-template-rows: repeat(var(--rows), var(--cell-size));
             position: absolute;
             top: 0; left: 0;
+            pointer-events: none;
         }
 
         .grid-cell {
             width: var(--cell-size);
             height: var(--cell-size);
-            border-bottom: 1px dashed rgba(255, 184, 184, 0.3);
-            border-right: 1px dashed rgba(255, 184, 184, 0.3);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            border-right: 1px solid rgba(255, 255, 255, 0.03);
         }
 
-        /* ぷよ（スライム）のデザイン */
+        /* ぷよ（ジェム/クリスタル風）のデザイン */
         .puyo {
             position: absolute;
             width: var(--cell-size);
             height: var(--cell-size);
-            border-radius: 50%;
+            border-radius: 8px;
             display: flex;
             justify-content: center;
             align-items: center;
-            box-shadow: inset -3px -3px 6px rgba(0,0,0,0.1), 
-                        inset 2px 2px 4px rgba(255,255,255,0.7);
-            transition: transform 0.1s linear; /* 移動時のスムーズさ */
+            transition: transform 0.1s linear, border-radius 0.1s;
             z-index: 10;
         }
 
-        /* 目 */
-        .puyo::before, .puyo::after {
-            content: '';
-            position: absolute;
-            width: 15%;
-            height: 25%;
-            background: #2f3542;
-            border-radius: 50%;
-            top: 25%;
-        }
-        .puyo::before { left: 25%; }
-        .puyo::after { right: 25%; }
+        /* 連結時の形変形 */
+        .puyo.conn-t { border-top-left-radius: 2px; border-top-right-radius: 2px; }
+        .puyo.conn-b { border-bottom-left-radius: 2px; border-bottom-right-radius: 2px; }
+        .puyo.conn-l { border-top-left-radius: 2px; border-bottom-left-radius: 2px; }
+        .puyo.conn-r { border-top-right-radius: 2px; border-bottom-right-radius: 2px; }
 
-        /* ハイライト */
+        /* ハイライト（ガラスの反射） */
         .puyo-highlight {
             position: absolute;
-            width: 25%;
-            height: 15%;
-            background: rgba(255,255,255,0.8);
-            border-radius: 50%;
-            top: 8%;
-            left: 15%;
-            transform: rotate(-25deg);
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 50%);
+            border-radius: inherit;
+            top: 0;
+            left: 0;
+            box-shadow: inset 0 0 8px rgba(255,255,255,0.3);
+            transform: none; /* 回転をリセット */
         }
 
-        /* カラーバリエーション */
-        .color-1 { background-color: #ff7eb3; } /* ピンク */
-        .color-2 { background-color: #7ec8ff; } /* 水色 */
-        .color-3 { background-color: #88f7a6; } /* 緑 */
-        .color-4 { background-color: #fff07e; } /* 黄色 */
+        /* カラーバリエーション（ネオンカラー） */
+        .color-1 { background-color: #ff007a; box-shadow: 0 0 10px #ff007a; } /* ネオンピンク */
+        .color-2 { background-color: #00f3ff; box-shadow: 0 0 10px #00f3ff; } /* シアン */
+        .color-3 { background-color: #39ff14; box-shadow: 0 0 10px #39ff14; } /* ライムグリーン */
+        .color-4 { background-color: #fce803; box-shadow: 0 0 10px #fce803; } /* イエロー */
 
-        /* ゴースト（落下予測位置） */
+        /* ゴースト */
         .puyo.ghost {
-            opacity: 0.3;
+            opacity: 0.2;
             box-shadow: none;
             z-index: 5;
+            border: 1px solid rgba(255,255,255,0.5);
+            background-color: transparent !important;
         }
-        .puyo.ghost::before, .puyo.ghost::after, .puyo.ghost .puyo-highlight {
-            display: none; /* ゴーストは顔なし */
+        .puyo.ghost .puyo-highlight {
+            display: none;
         }
 
         /* 消去時のアニメーション */
         .puyo.pop {
-            animation: popAnim 0.3s forwards;
+            animation: popAnim 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            z-index: 20;
         }
 
         @keyframes popAnim {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.3); opacity: 0.8; }
-            100% { transform: scale(0); opacity: 0; }
+            0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+            50% { transform: scale(1.4) rotate(15deg); opacity: 0.8; filter: brightness(2); }
+            100% { transform: scale(0) rotate(45deg); opacity: 0; filter: brightness(3); }
         }
 
         /* 連鎖エフェクト */
@@ -191,103 +204,121 @@
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 2rem;
-            color: #ff4757;
-            text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 0 10px #ff007a, 0 0 20px #ff007a, 0 0 30px #ff007a;
             pointer-events: none;
             z-index: 100;
-            animation: floatUp 1s forwards;
+            animation: floatUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
             opacity: 0;
+            white-space: nowrap;
         }
 
         @keyframes floatUp {
-            0% { transform: translate(-50%, -30%) scale(0.5); opacity: 0; }
-            20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
-            100% { transform: translate(-50%, -80%) scale(1); opacity: 0; }
+            0% { transform: translate(-50%, -30%) scale(0.5) skewX(-10deg); opacity: 0; }
+            20% { transform: translate(-50%, -50%) scale(1.2) skewX(0deg); opacity: 1; }
+            80% { transform: translate(-50%, -60%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -80%) scale(0.8); opacity: 0; }
         }
 
         /* コントローラー */
         .controls {
-            margin-top: 15px;
+            margin-top: 20px;
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
+            gap: 10px;
             width: 100%;
             max-width: 280px;
         }
 
         .btn {
-            background: #fff;
-            border: 2px solid #ff7f50;
-            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
             padding: 12px 0;
             font-size: 1.2rem;
-            color: #ff6348;
-            font-weight: bold;
+            color: #e2e8f0;
             cursor: pointer;
-            box-shadow: 0 4px 0 #ff7f50;
+            backdrop-filter: blur(5px);
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
 
         .btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #ff7f50;
+            transform: translateY(2px);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 2px 3px rgba(0,0,0,0.3);
         }
 
         .btn-large {
-            grid-column: span 2;
-            background: #ff7f50;
+            grid-column: span 4;
+            background: linear-gradient(90deg, #ff007a, #7a00ff);
             color: #fff;
-            border-color: #ff6348;
-            box-shadow: 0 4px 0 #ff6348;
+            border: none;
+            font-family: 'Noto Sans JP', sans-serif;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
         .btn-large:active {
-            box-shadow: 0 0 0 #ff6348;
+            background: linear-gradient(90deg, #d60066, #6000c9);
         }
 
         /* モーダル画面 */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 240, 245, 0.8);
+            background: rgba(15, 15, 26, 0.85);
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            backdrop-filter: blur(3px);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: opacity 0.3s;
         }
 
         .modal {
-            background: #fff;
-            border: 4px solid #ff7f50;
-            border-radius: 20px;
-            padding: 30px;
+            background: rgba(25, 30, 45, 0.7);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 16px;
+            padding: 40px 30px;
             text-align: center;
-            box-shadow: 0 10px 25px rgba(255, 107, 129, 0.3);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
             max-width: 90%;
+            width: 320px;
         }
 
         .modal h2 {
-            color: #ff4757;
-            font-size: 1.8rem;
-            margin-bottom: 15px;
+            font-family: 'Montserrat', 'Noto Sans JP', sans-serif;
+            color: #fff;
+            font-size: 2rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00f3ff;
+            letter-spacing: 2px;
         }
 
         .start-btn {
-            background: #ff7f50;
-            color: white;
+            background: #00f3ff;
+            color: #0f0f1a;
             border: none;
-            padding: 10px 30px;
+            padding: 12px 40px;
             font-size: 1.2rem;
-            border-radius: 30px;
-            font-family: inherit;
+            border-radius: 8px;
+            font-family: 'Noto Sans JP', sans-serif;
+            font-weight: 700;
             cursor: pointer;
-            box-shadow: 0 4px 0 #eccc68;
-            margin-top: 10px;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
+            margin-top: 20px;
+            transition: all 0.2s;
+            letter-spacing: 1px;
         }
         
         .start-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #eccc68;
+            transform: translateY(2px) scale(0.98);
+            box-shadow: 0 0 5px rgba(0, 243, 255, 0.6);
         }
 
         .hidden { display: none !important; }
@@ -315,7 +346,7 @@
         <div class="board-container" id="board">
             <!-- 背景グリッド -->
             <div class="grid" id="grid-bg"></div>
-            <!-- 固定されたぷよがここに追加される -->
+            <!-- 固定されたぷよ -->
             <div id="static-puyos"></div>
             
             <!-- アクティブ（操作中）ぷよ -->
@@ -333,18 +364,20 @@
         <button class="btn" id="btn-down">▼</button>
         <button class="btn" id="btn-right">▶</button>
         <button class="btn" id="btn-rotate">↻</button>
-        <button class="btn btn-large" style="grid-column: span 4;" id="btn-drop">一気に落とす</button>
+        <button class="btn btn-large" id="btn-drop">一気に落とす</button>
     </div>
 
     <!-- スタート / ゲームオーバー 画面 -->
     <div class="modal-overlay" id="modal">
         <div class="modal">
             <h2 id="modal-title">ぷよぱずる</h2>
-            <p style="color: #666; margin-bottom: 15px; font-size: 0.9rem;">
+            <p style="color: #94a3b8; margin-bottom: 15px; font-size: 0.9rem; line-height: 1.5;">
                 同じ色を4つ以上つなげて消そう！<br>
-                PC: 矢印キーで移動、上で回転
+                <span style="color: #00f3ff;">【操作方法】</span><br>
+                PC: 矢印キーで移動、上で回転<br>
+                スマホ: 盤面をスワイプ＆タップ
             </p>
-            <button class="start-btn" id="start-btn">スタート♪</button>
+            <button class="start-btn" id="start-btn">START</button>
         </div>
     </div>
 
@@ -362,9 +395,8 @@
         let gameActive = false;
         let isAnimating = false;
         let dropInterval;
-        let fallSpeed = 800; // 初期スピード
+        let fallSpeed = 800;
 
-        // 現在操作中のぷよ
         let currentPiece = null; 
         let nextPiece = null;
 
@@ -376,7 +408,6 @@
         const modal = document.getElementById('modal');
         const modalTitle = document.getElementById('modal-title');
 
-        // アクティブな要素
         const elMain = document.getElementById('puyo-main');
         const elSub = document.getElementById('puyo-sub');
         const elGhostMain = document.getElementById('ghost-main');
@@ -400,19 +431,23 @@
             return Math.floor(Math.random() * COLORS) + 1;
         }
 
-        function createPuyoHTML(color) {
-            return `<div class="puyo color-${color}"><div class="puyo-highlight"></div></div>`;
-        }
-
         // === レンダリング ===
-        // 現在のボード状態をすべて描画し直す（アニメーション終了後用）
         function renderBoard() {
             domStatic.innerHTML = '';
             for (let y = 0; y < ROWS; y++) {
                 for (let x = 0; x < COLS; x++) {
                     if (board[y][x] !== 0) {
+                        const color = board[y][x];
                         const p = document.createElement('div');
-                        p.className = `puyo color-${board[y][x]}`;
+                        
+                        // 連結判定（くっつき表現のクラス付与）
+                        const classes = ['puyo', `color-${color}`];
+                        if (y > 0 && board[y-1][x] === color) classes.push('conn-t');
+                        if (y < ROWS - 1 && board[y+1][x] === color) classes.push('conn-b');
+                        if (x > 0 && board[y][x-1] === color) classes.push('conn-l');
+                        if (x < COLS - 1 && board[y][x+1] === color) classes.push('conn-r');
+
+                        p.className = classes.join(' ');
                         p.id = `cell-${x}-${y}`;
                         p.style.transform = `translate(${x * CELL_SIZE}px, ${y * CELL_SIZE}px)`;
                         p.innerHTML = '<div class="puyo-highlight"></div>';
@@ -422,7 +457,6 @@
             }
         }
 
-        // 操作中ぷよの座標と色を更新
         function updateActivePiece() {
             if (!currentPiece) {
                 elMain.classList.add('hidden'); elSub.classList.add('hidden');
@@ -430,15 +464,26 @@
                 return;
             }
 
+            // 操作中ぷよの連結判定
+            let mainClasses = `puyo color-${currentPiece.mainColor}`;
+            let subClasses = `puyo color-${currentPiece.subColor}`;
+            
+            if (currentPiece.mainColor === currentPiece.subColor) {
+                if (currentPiece.rot === 0) { mainClasses += ' conn-t'; subClasses += ' conn-b'; }
+                if (currentPiece.rot === 1) { mainClasses += ' conn-r'; subClasses += ' conn-l'; }
+                if (currentPiece.rot === 2) { mainClasses += ' conn-b'; subClasses += ' conn-t'; }
+                if (currentPiece.rot === 3) { mainClasses += ' conn-l'; subClasses += ' conn-r'; }
+            }
+
             elMain.classList.remove('hidden');
-            elMain.className = `puyo color-${currentPiece.mainColor}`;
+            elMain.className = mainClasses;
             elMain.style.transform = `translate(${currentPiece.x * CELL_SIZE}px, ${currentPiece.y * CELL_SIZE}px)`;
 
             elSub.classList.remove('hidden');
-            elSub.className = `puyo color-${currentPiece.subColor}`;
+            elSub.className = subClasses;
             elSub.style.transform = `translate(${currentPiece.subX * CELL_SIZE}px, ${currentPiece.subY * CELL_SIZE}px)`;
 
-            // ゴーストの計算
+            // ゴースト
             const ghost = calculateGhost();
             elGhostMain.classList.remove('hidden');
             elGhostMain.className = `puyo ghost color-${currentPiece.mainColor}`;
@@ -449,15 +494,12 @@
             elGhostSub.style.transform = `translate(${ghost.subX * CELL_SIZE}px, ${ghost.subY * CELL_SIZE}px)`;
         }
 
-        // ゴーストの落下位置を計算
         function calculateGhost() {
             let gy = currentPiece.y;
             let gSubY = currentPiece.subY;
             
             while (true) {
-                if (!isValidPos(currentPiece.x, gy + 1) || !isValidPos(currentPiece.subX, gSubY + 1)) {
-                    break;
-                }
+                if (!isValidPos(currentPiece.x, gy + 1) || !isValidPos(currentPiece.subX, gSubY + 1)) break;
                 gy++;
                 gSubY++;
             }
@@ -467,13 +509,21 @@
         function renderNext() {
             domNext.innerHTML = '';
             if (nextPiece) {
+                let mainClasses = `puyo color-${nextPiece.mainColor}`;
+                let subClasses = `puyo color-${nextPiece.subColor}`;
+                
+                if (nextPiece.mainColor === nextPiece.subColor) {
+                    mainClasses += ' conn-t';
+                    subClasses += ' conn-b';
+                }
+
                 const s = document.createElement('div');
-                s.className = `puyo color-${nextPiece.subColor}`;
+                s.className = subClasses;
                 s.style.transform = `translate(0px, -15px)`;
                 s.innerHTML = '<div class="puyo-highlight"></div>';
                 
                 const m = document.createElement('div');
-                m.className = `puyo color-${nextPiece.mainColor}`;
+                m.className = mainClasses;
                 m.style.transform = `translate(0px, 15px)`;
                 m.innerHTML = '<div class="puyo-highlight"></div>';
                 
@@ -486,7 +536,7 @@
         function startGame() {
             board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
             score = 0;
-            domScore.innerText = score;
+            updateScoreDisplay();
             gameActive = true;
             isAnimating = false;
             fallSpeed = 800;
@@ -508,7 +558,6 @@
         }
 
         function spawnPiece() {
-            // 出現位置
             const startX = 2;
             const startY = 1;
 
@@ -521,7 +570,7 @@
                 x: startX, y: startY,
                 subX: startX, subY: startY - 1,
                 mainColor: nextPiece.mainColor, subColor: nextPiece.subColor,
-                rot: 0 // 0:上, 1:右, 2:下, 3:左
+                rot: 0
             };
 
             nextPiece = { mainColor: getRandomColor(), subColor: getRandomColor() };
@@ -532,7 +581,7 @@
         // --- 操作 ---
         function isValidPos(x, y) {
             if (x < 0 || x >= COLS || y >= ROWS) return false;
-            if (y >= 0 && board[y][x] !== 0) return false; // 盤面にあるブロック
+            if (y >= 0 && board[y][x] !== 0) return false;
             return true;
         }
 
@@ -563,15 +612,20 @@
             else if (nextRot === 2) ny++; // 下
             else if (nextRot === 3) nx--; // 左
 
-            // 壁蹴り（簡易的）
+            // 壁蹴り・他ブロック回避（より本家っぽく）
             if (!isValidPos(nx, ny)) {
-                if (nx < 0) { currentPiece.x++; nx++; } // 左壁
-                else if (nx >= COLS) { currentPiece.x--; nx--; } // 右壁
-                else return; // 床やブロックで回転不可
+                if (nx < 0) { nx++; currentPiece.x++; currentPiece.subX++; } // 左壁
+                else if (nx >= COLS) { nx--; currentPiece.x--; currentPiece.subX--; } // 右壁
+                else if (ny >= ROWS || (ny >= 0 && board[ny][nx] !== 0)) {
+                    // 下の床やブロックにぶつかる場合、軸を上に持ち上げる
+                    ny--; currentPiece.y--; currentPiece.subY--;
+                }
             }
 
-            // 回転後も不正ならキャンセル
-            if (!isValidPos(currentPiece.x, currentPiece.y) || !isValidPos(nx, ny)) return;
+            if (!isValidPos(currentPiece.x, currentPiece.y) || !isValidPos(nx, ny)) {
+                // 回避しきれなかった場合は回転キャンセルして位置を元に戻す処理（今回はシンプルにキャンセル）
+                return;
+            }
 
             currentPiece.subX = nx;
             currentPiece.subY = ny;
@@ -592,9 +646,7 @@
 
         function autoDrop() {
             if (!gameActive || isAnimating) return;
-            if (!move(0, 1)) {
-                lockPiece();
-            }
+            if (!move(0, 1)) lockPiece();
         }
 
         // --- 固定と連鎖 ---
@@ -602,15 +654,13 @@
             isAnimating = true;
             clearInterval(dropInterval);
 
-            // ボードに書き込み
             if (currentPiece.y >= 0) board[currentPiece.y][currentPiece.x] = currentPiece.mainColor;
             if (currentPiece.subY >= 0) board[currentPiece.subY][currentPiece.subX] = currentPiece.subColor;
             
             currentPiece = null;
-            updateActivePiece(); // アクティブを隠す
+            updateActivePiece();
             renderBoard();
 
-            // 連鎖処理ループ
             await resolveChains();
 
             if (gameActive) {
@@ -622,16 +672,13 @@
 
         async function applyGravity() {
             let dropped = false;
-            
             for (let x = 0; x < COLS; x++) {
                 for (let y = ROWS - 1; y >= 0; y--) {
                     if (board[y][x] === 0) continue;
-                    
                     let targetY = y;
                     while (targetY + 1 < ROWS && board[targetY + 1][x] === 0) {
                         targetY++;
                     }
-                    
                     if (targetY !== y) {
                         board[targetY][x] = board[y][x];
                         board[y][x] = 0;
@@ -641,7 +688,7 @@
             }
             if (dropped) {
                 renderBoard();
-                await wait(250); // 落下を見せる時間
+                await wait(250);
             }
             return dropped;
         }
@@ -682,52 +729,53 @@
             return matches;
         }
 
+        function updateScoreDisplay() {
+            domScore.innerText = score;
+            domScore.classList.remove('bump');
+            void domScore.offsetWidth; // リフロー強制
+            domScore.classList.add('bump');
+        }
+
         async function resolveChains() {
             let chain = 0;
             while (true) {
                 await applyGravity();
                 const matches = findMatches();
-                
                 if (matches.length === 0) break;
                 
                 chain++;
                 let popCount = 0;
                 
-                // 消えるアニメーション付与
                 matches.forEach(group => {
                     popCount += group.length;
                     group.forEach(p => {
                         const el = document.getElementById(`cell-${p.x}-${p.y}`);
                         if (el) el.classList.add('pop');
-                        board[p.y][p.x] = 0; // 内部データからは消す
+                        board[p.y][p.x] = 0; 
                     });
                 });
 
-                // 連鎖表示
                 if (chain > 1) {
                     const msg = document.createElement('div');
                     msg.className = 'chain-text';
                     msg.innerText = `${chain}連鎖!!`;
                     domBoard.appendChild(msg);
-                    setTimeout(() => msg.remove(), 1000);
+                    setTimeout(() => msg.remove(), 1200);
                 }
 
-                // スコア計算
                 const multiplier = chain === 1 ? 1 : (chain - 1) * 8;
                 score += popCount * 10 * multiplier;
-                domScore.innerText = score;
+                updateScoreDisplay();
 
-                // スピードアップ
-                if (score > 1000 && fallSpeed > 400) fallSpeed = 600;
+                if (score > 1000 && fallSpeed > 500) fallSpeed = 600;
                 if (score > 3000 && fallSpeed > 300) fallSpeed = 400;
 
-                await wait(400); // 消えるアニメーションの完了を待つ
-                renderBoard(); // 完全に消えた状態を再描画
+                await wait(400); 
+                renderBoard(); 
             }
         }
 
         // === イベントリスナー ===
-        // キーボード
         document.addEventListener('keydown', e => {
             if (e.key === 'ArrowLeft') move(-1, 0);
             if (e.key === 'ArrowRight') move(1, 0);
@@ -736,10 +784,10 @@
             if (e.key === ' ') hardDrop();
         });
 
-        // ボタン（タッチ＆クリック対応）
+        // ボタン操作
         const attachBtn = (id, action) => {
             const btn = document.getElementById(id);
-            btn.addEventListener('touchstart', e => { e.preventDefault(); action(); });
+            btn.addEventListener('touchstart', e => { e.preventDefault(); action(); }, {passive: false});
             btn.addEventListener('mousedown', e => { e.preventDefault(); action(); });
         };
 
@@ -748,6 +796,54 @@
         attachBtn('btn-down', () => move(0, 1));
         attachBtn('btn-rotate', rotate);
         attachBtn('btn-drop', hardDrop);
+
+        // ボード上のスワイプ・タッチ操作
+        let touchStartX = 0, touchStartY = 0, touchLastX = 0, touchLastY = 0, touchStartTime = 0;
+
+        domBoard.addEventListener('touchstart', e => {
+            if (!gameActive || isAnimating) return;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchLastX = touchStartX;
+            touchLastY = touchStartY;
+            touchStartTime = Date.now();
+        }, {passive: false});
+
+        domBoard.addEventListener('touchmove', e => {
+            if (!gameActive || isAnimating || !currentPiece) return;
+            e.preventDefault();
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
+            const dx = currentX - touchLastX;
+            const dy = currentY - touchLastY;
+            
+            // 横移動（感度調整）
+            if (Math.abs(dx) > CELL_SIZE * 0.8) {
+                move(Math.sign(dx), 0);
+                touchLastX = currentX;
+            }
+            // 下移動
+            if (dy > CELL_SIZE * 0.8) {
+                move(0, 1);
+                touchLastY = currentY;
+            }
+        }, {passive: false});
+
+        domBoard.addEventListener('touchend', e => {
+            if (!gameActive || isAnimating) return;
+            const duration = Date.now() - touchStartTime;
+            const totalDx = touchLastX - touchStartX;
+            const totalDy = touchLastY - touchStartY;
+            
+            // タップ判定で回転
+            if (duration < 250 && Math.abs(totalDx) < 15 && Math.abs(totalDy) < 15) {
+                rotate();
+            } 
+            // フリックダウン判定でハードドロップ
+            else if (duration < 300 && totalDy > 60) {
+                hardDrop();
+            }
+        });
 
         document.getElementById('start-btn').addEventListener('click', startGame);
 
